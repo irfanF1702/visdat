@@ -1,280 +1,567 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Emission Data in Indonesia</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <!-- Harus di bagian atas -->
     <script src="emisiCo2_cleaned.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-        }
-        .chart-container {
-            margin: 30px 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            position: sticky;
-            top: 0;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .data-table {
-            max-height: 500px;
-            overflow-y: auto;
-            margin: 20px 0;
-        }
-        .controls {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        select, button {
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>CO2 Emission Data in Indonesia (2018-2025)</h1>
-        
-        <div class="controls">
-            <select id="provinsiSelect">
-                <option value="">All Provinces</option>
-                <!-- Options will be populated by JavaScript -->
-            </select>
-            <select id="tahunSelect">
-                <option value="">All Years</option>
-                <!-- Options will be populated by JavaScript -->
-            </select>
-            <button id="filterBtn">Apply Filter</button>
-            <button id="resetBtn">Reset Filters</button>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="emissionChart"></canvas>
-        </div>
-        
-        <div class="data-table">
-            <table id="dataTable">
-                <thead>
-                    <tr>
-                        <th>Province</th>
-                        <th>Year</th>
-                        <th>CO2 Emissions (tons)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Data will be populated by JavaScript -->
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <script>
-        // Wait for the data to be loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get unique provinces and years for dropdowns
-            const provinces = [...new Set(emisiCO2Data.map(item => item.Provinsi))];
-            const years = [...new Set(emisiCO2Data.map(item => item.Tahun))].sort();
+    <!-- Baru setelah itu script utama kamu (yang ada di dalam <script>...</script>) -->
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>CO2 Emission Data in Indonesian </title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <!-- Leaflet CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+        <!-- Leaflet JS -->
+        <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background-color: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            h1 {
+                color: #2c3e50;
+                text-align: center;
+            }
+            .chart-container {
+                margin: 30px 0;
+            }
+            .map-container {
+                height: 500px;
+                margin: 30px 0;
+                border-radius: 8px;
+                overflow: hidden;
+                border: 1px solid #ddd;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            th {
+                background-color: #f2f2f2;
+                position: sticky;
+                top: 0;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .data-table {
+                max-height: 500px;
+                overflow-y: auto;
+                margin: 20px 0;
+            }
+            .controls {
+                margin: 20px 0;
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            select, button {
+                padding: 8px 12px;
+                border-radius: 4px;
+                border: 1px solid #ddd;
+            }
+            button {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            button:hover {
+                background-color: #2980b9;
+            }
+            .info {
+                padding: 6px 8px;
+                font: 14px/16px Arial, Helvetica, sans-serif;
+                background: white;
+                background: rgba(255,255,255,0.8);
+                box-shadow: 0 0 15px rgba(0,0,0,0.2);
+                border-radius: 5px;
+            }
+            .info h4 {
+                margin: 0 0 5px;
+                color: #777;
+            }
+            .legend {
+                line-height: 18px;
+                color: #555;
+            }
+            .legend i {
+                width: 18px;
+                height: 18px;
+                float: left;
+                margin-right: 8px;
+                opacity: 0.7;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>CO2 Emission Data in Indonesian (2018-2025)</h1>
+
             
-            // Populate province dropdown
-            const provinsiSelect = document.getElementById('provinsiSelect');
-            provinces.forEach(provinsi => {
-                if (provinsi !== "Total") { // Exclude "Total" from filter options
+            <div class="map-container" id="map">
+
+            </div>
+                        
+            <div class="controls">
+                <select id="provinsiSelect">
+                    <option value="">All Provinces</option>
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+                <select id="tahunSelect">
+                    <option value="">All Years</option>
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+                <button id="filterBtn">Apply Filter</button>
+                <button id="resetBtn">Reset Filters</button>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="emissionChart"></canvas>
+            </div>
+            
+            <div class="data-table">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Province</th>
+                            <th>Year</th>
+                            <th>CO2 Emissions (tons)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+            // Wait for the data to be loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                // Get unique provinces and years for dropdowns
+                const provinces = [...new Set(emisiCO2Data.map(item => item.Provinsi))];
+                const years = [...new Set(emisiCO2Data.map(item => item.Tahun))].sort();
+                
+                // Populate province dropdown
+                const provinsiSelect = document.getElementById('provinsiSelect');
+                provinces.forEach(provinsi => {
+                    if (provinsi !== "Total") { // Exclude "Total" from filter options
+                        const option = document.createElement('option');
+                        option.value = provinsi;
+                        option.textContent = provinsi;
+                        provinsiSelect.appendChild(option);
+                    }
+                });
+                
+                // Populate year dropdown
+                const tahunSelect = document.getElementById('tahunSelect');
+                years.forEach(tahun => {
                     const option = document.createElement('option');
-                    option.value = provinsi;
-                    option.textContent = provinsi;
-                    provinsiSelect.appendChild(option);
-                }
-            });
-            
-            // Populate year dropdown
-            const tahunSelect = document.getElementById('tahunSelect');
-            years.forEach(tahun => {
-                const option = document.createElement('option');
-                option.value = tahun;
-                option.textContent = tahun;
-                tahunSelect.appendChild(option);
-            });
-            
-            // Initialize chart
-            const ctx = document.getElementById('emissionChart').getContext('2d');
-            let emissionChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'CO2 Emissions (tons)',
-                        data: [],
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'CO2 Emissions (tons)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Province/Year'
+                    option.value = tahun;
+                    option.textContent = tahun;
+                    tahunSelect.appendChild(option);
+                });
+                
+                // Initialize chart
+                const ctx = document.getElementById('emissionChart').getContext('2d');
+                let emissionChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'CO2 Emissions (tons)',
+                            data: [],
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'CO2 Emissions (tons)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Province/Year'
+                                }
                             }
                         }
                     }
-                }
-            });
-            
-            // Function to update table and chart based on filters
-            function updateData(provinsiFilter = '', tahunFilter = '') {
-                let filteredData = emisiCO2Data;
-                
-                if (provinsiFilter) {
-                    filteredData = filteredData.filter(item => item.Provinsi === provinsiFilter);
-                }
-                
-                if (tahunFilter) {
-                    filteredData = filteredData.filter(item => item.Tahun == tahunFilter);
-                }
-                
-                // Update table
-                const tableBody = document.querySelector('#dataTable tbody');
-                tableBody.innerHTML = '';
-                
-                filteredData.forEach(item => {
-                    const row = document.createElement('tr');
-                    
-                    const provinsiCell = document.createElement('td');
-                    provinsiCell.textContent = item.Provinsi;
-                    row.appendChild(provinsiCell);
-                    
-                    const tahunCell = document.createElement('td');
-                    tahunCell.textContent = item.Tahun;
-                    row.appendChild(tahunCell);
-                    
-                    const co2Cell = document.createElement('td');
-                    co2Cell.textContent = item.CO2.toLocaleString();
-                    row.appendChild(co2Cell);
-                    
-                    tableBody.appendChild(row);
                 });
                 
-                // Update chart
-                let chartLabels, chartData;
+                // Initialize map
+                const map = L.map('map').setView([-2.5489, 118.0149], 5);
                 
-                if (provinsiFilter && !tahunFilter) {
-                    // Show data for a specific province over years
-                    const provinceData = emisiCO2Data.filter(item => item.Provinsi === provinsiFilter)
-                        .sort((a, b) => a.Tahun - b.Tahun);
-                    
-                    chartLabels = provinceData.map(item => item.Tahun);
-                    chartData = provinceData.map(item => item.CO2);
-                    
-                    emissionChart.options.scales.x.title.text = 'Year';
-                    emissionChart.data.datasets[0].label = `CO2 Emissions for ${provinsiFilter} (tons)`;
-                } 
-                else if (tahunFilter && !provinsiFilter) {
-                    // Show data for all provinces in a specific year (excluding "Total")
-                    const yearData = emisiCO2Data.filter(item => item.Tahun == tahunFilter && item.Provinsi !== "Total")
-                        .sort((a, b) => b.CO2 - a.CO2);
-                    
-                    // Limit to top 20 provinces for better visualization
-                    const topProvinces = yearData.slice(0, 20);
-                    
-                    chartLabels = topProvinces.map(item => item.Provinsi);
-                    chartData = topProvinces.map(item => item.CO2);
-                    
-                    emissionChart.options.scales.x.title.text = 'Province';
-                    emissionChart.data.datasets[0].label = `CO2 Emissions in ${tahunFilter} (tons)`;
+                // Add base map
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+                
+                // Create a layer for the choropleth map
+                const geojsonLayer = L.geoJson(null, {
+                    style: styleFeature,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+                
+                // Create a control for the legend
+                const legend = L.control({position: 'bottomleft'});
+                
+                // Mapping between GeoJSON province names and our data names
+                const provinceNameMap = {
+                    "Aceh": "Aceh",
+                    "Bali": "Bali",
+                    "Banten": "Banten",
+                    "Bengkulu": "Bengkulu",
+                    "DI Yogyakarta": "Yogyakarta",
+                    "DKI Jakarta": "DKI Jakarta",
+                    "Gorontalo": "Gorontalo",
+                    "Jambi": "Jambi",
+                    "Jawa Barat": "Jawa Barat",
+                    "Jawa Tengah": "Jawa Tengah",
+                    "Jawa Timur": "Jawa Timur",
+                    "Kalimantan Barat": "Kalimantan Barat",
+                    "Kalimantan Selatan": "Kalimantan Selatan",
+                    "Kalimantan Tengah": "Kalimantan Tengah",
+                    "Kalimantan Timur": "Kalimantan Timur",
+                    "Kalimantan Utara": "Kalimantan Utara",
+                    "Kepulauan Bangka Belitung": "Bangka Belitung",
+                    "Kepulauan Riau": "Kepulauan Riau",
+                    "Lampung": "Lampung",
+                    "Maluku": "Maluku",
+                    "Maluku Utara": "Maluku Utara",
+                    "Nusa Tenggara Barat": "Nusa Tenggara Barat",
+                    "Nusa Tenggara Timur": "Nusa Tenggara Timur",
+                    "Papua": "Papua",
+                    "Papua Barat": "Papua Barat",
+                    "Papua Barat Daya": "Papua Barat Daya",
+                    "Papua Pegunungan": "Papua Pegunungan",
+                    "Papua Selatan": "Papua Selatan",
+                    "Papua Tengah": "Papua Tengah",
+                    "Riau": "Riau",
+                    "Sulawesi Barat": "Sulawesi Barat",
+                    "Sulawesi Selatan": "Sulawesi Selatan",
+                    "Sulawesi Tengah": "Sulawesi Tengah",
+                    "Sulawesi Tenggara": "Sulawesi Tenggara",
+                    "Sulawesi Utara": "Sulawesi Utara",
+                    "Sumatera Barat": "Sumatera Barat",
+                    "Sumatera Selatan": "Sumatera Selatan",
+                    "Sumatera Utara": "Sumatera Utara"
+                };
+
+                // Function to get the mapped province name
+                function getMappedProvinceName(name) {
+                    return provinceNameMap[name] || name;
                 }
-                else if (provinsiFilter && tahunFilter) {
-                    // Show single data point
-                    chartLabels = [`${provinsiFilter} (${tahunFilter})`];
-                    chartData = filteredData.map(item => item.CO2);
+
+                // Function to style each feature based on CO2 emissions
+                function styleFeature(feature) {
+                    const provinsi = getMappedProvinceName(feature.properties.PROVINSI);
+                    const tahun = document.getElementById('tahunSelect').value || Math.max(...years);
                     
-                    emissionChart.options.scales.x.title.text = '';
-                    emissionChart.data.datasets[0].label = 'CO2 Emissions (tons)';
-                }
-                else {
-                    // Show total emissions by year
-                    const totalData = emisiCO2Data.filter(item => item.Provinsi === "Total")
-                        .sort((a, b) => a.Tahun - b.Tahun);
+                    // Find the data for this province and year
+                    const data = emisiCO2Data.find(item => 
+                        item.Provinsi === provinsi && item.Tahun == tahun
+                    );
                     
-                    chartLabels = totalData.map(item => item.Tahun);
-                    chartData = totalData.map(item => item.CO2);
+                    const co2 = data ? data.CO2 : 0;
                     
-                    emissionChart.options.scales.x.title.text = 'Year';
-                    emissionChart.data.datasets[0].label = 'Total CO2 Emissions (tons)';
+                    // Color based on CO2 emissions
+                    let color;
+                    if (co2 > 10000000) color = '#800026';
+                    else if (co2 > 5000000) color = '#BD0026';
+                    else if (co2 > 1000000) color = '#E31A1C';
+                    else if (co2 > 500000) color = '#FC4E2A';
+                    else if (co2 > 100000) color = '#FD8D3C';
+                    else if (co2 > 50000) color = '#FEB24C';
+                    else if (co2 > 10000) color = '#FED976';
+                    else color = '#FFEDA0';
+                    
+                    return {
+                        fillColor: color,
+                        weight: 1,
+                        opacity: 1,
+                        color: 'white',
+                        dashArray: '3',
+                        fillOpacity: 0.7
+                    };
                 }
                 
-                emissionChart.data.labels = chartLabels;
-                emissionChart.data.datasets[0].data = chartData;
-                emissionChart.update();
-            }
-            
-            // Initial data load
-            updateData();
-            
-            // Filter button event
-            document.getElementById('filterBtn').addEventListener('click', function() {
-                const provinsiFilter = document.getElementById('provinsiSelect').value;
-                const tahunFilter = document.getElementById('tahunSelect').value;
-                updateData(provinsiFilter, tahunFilter);
-            });
-            
-            // Reset button event
-            document.getElementById('resetBtn').addEventListener('click', function() {
-                document.getElementById('provinsiSelect').value = '';
-                document.getElementById('tahunSelect').value = '';
+                // Function to handle events for each feature
+                function onEachFeature(feature, layer) {
+                    const provinsi = getMappedProvinceName(feature.properties.PROVINSI);
+                    
+                    // When a province is clicked, show all data for that province
+                    layer.on('click', function(e) {
+                        // Filter data for this province
+                        const provinceData = emisiCO2Data.filter(item => item.Provinsi === provinsi)
+                            .sort((a, b) => a.Tahun - b.Tahun);
+                        
+                        // Update the table
+                        const tableBody = document.querySelector('#dataTable tbody');
+                        tableBody.innerHTML = '';
+                        
+                        provinceData.forEach(item => {
+                            const row = document.createElement('tr');
+                            
+                            const provinsiCell = document.createElement('td');
+                            provinsiCell.textContent = item.PROVINSI;
+                            row.appendChild(provinsiCell);
+                            
+                            const tahunCell = document.createElement('td');
+                            tahunCell.textContent = item.Tahun;
+                            row.appendChild(tahunCell);
+                            
+                            const co2Cell = document.createElement('td');
+                            co2Cell.textContent = item.CO2.toLocaleString();
+                            row.appendChild(co2Cell);
+                            
+                            tableBody.appendChild(row);
+                        });
+                        
+                        // Update the chart to show data for this province over years
+                        const chartLabels = provinceData.map(item => item.Tahun);
+                        const chartData = provinceData.map(item => item.CO2);
+                        
+                        emissionChart.data.labels = chartLabels;
+                        emissionChart.data.datasets[0].data = chartData;
+                        emissionChart.options.scales.x.title.text = 'Year';
+                        emissionChart.data.datasets[0].label = `CO2 Emissions for ${provinsi} (tons)`;
+                        emissionChart.update();
+                        
+                        // Update the province dropdown to show this province
+                        document.getElementById('provinsiSelect').value = provinsi;
+                        document.getElementById('tahunSelect').value = '';
+                        
+                        // Zoom to the clicked province
+                        map.fitBounds(layer.getBounds());
+                    });
+                    
+                    // Show popup on hover
+                    layer.on('mouseover', function(e) {
+                        const tahun = document.getElementById('tahunSelect').value || Math.max(...years);
+                        const data = emisiCO2Data.find(item => 
+                            item.Provinsi === provinsi && item.Tahun == tahun
+                        );
+                        
+                        const co2 = data ? data.CO2.toLocaleString() + ' tons' : 'No data';
+                        
+                        layer.bindPopup(`<b>${provinsi}</b><br>CO2 Emissions: ${co2}`).openPopup();
+                        
+                        highlightFeature(e);
+                    });
+                    
+                    layer.on('mouseout', function(e) {
+                        layer.closePopup();
+                        resetHighlight(e);
+                    });
+                }
+                
+                // Function to highlight feature on hover
+                function highlightFeature(e) {
+                    const layer = e.target;
+                    
+                    layer.setStyle({
+                        weight: 3,
+                        color: '#666',
+                        dashArray: '',
+                        fillOpacity: 0.7
+                    });
+                    
+                    layer.bringToFront();
+                }
+                
+                // Function to reset highlight
+                function resetHighlight(e) {
+                    geojsonLayer.resetStyle(e.target);
+                }
+                
+                // Function to update legend
+                function updateLegend() {
+                    const tahun = document.getElementById('tahunSelect').value || Math.max(...years);
+                    legend.onAdd = function(map) {
+                        const div = L.DomUtil.create('div', 'info legend');
+                        const grades = [0, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000];
+                        const colors = ['#FFEDA0', '#FED976', '#FEB24C', '#FD8D3C', '#FC4E2A', '#E31A1C', '#BD0026', '#800026'];
+                        
+                        div.innerHTML = '<h4>CO2 Emissions (tons) in ' + tahun + '</h4>';
+                        
+                        for (let i = 0; i < grades.length; i++) {
+                            div.innerHTML +=
+                                '<i style="background:' + colors[i] + '"></i> ' +
+                                grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                        }
+                        
+                        return div;
+                    };
+                    
+                    legend.addTo(map);
+                }
+                
+                // Load GeoJSON data for Indonesia provinces
+                //fetch('https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia-province-simple.json')
+                fetch('indonesia_provinces.json')  
+                .then(response => response.json())
+                    .then(data => {
+                        // Add GeoJSON data to the layer
+                        geojsonLayer.addData(data);
+                        
+                        // Fit map to bounds
+                        map.fitBounds(geojsonLayer.getBounds());
+                        
+                        // Update legend
+                        updateLegend();
+                    })
+                    .catch(error => {
+                        console.error('Error loading GeoJSON:', error);
+                    });
+                
+                // Function to update table, chart, and map based on filters
+                function updateData(provinsiFilter = '', tahunFilter = '') {
+                    let filteredData = emisiCO2Data;
+                    
+                    if (provinsiFilter) {
+                        filteredData = filteredData.filter(item => item.Provinsi === provinsiFilter);
+                    }
+                    
+                    if (tahunFilter) {
+                        filteredData = filteredData.filter(item => item.Tahun == tahunFilter);
+                    }
+                    
+                    // Update table
+                    const tableBody = document.querySelector('#dataTable tbody');
+                    tableBody.innerHTML = '';
+                    
+                    filteredData.forEach(item => {
+                        const row = document.createElement('tr');
+                        
+                        const provinsiCell = document.createElement('td');
+                        provinsiCell.textContent = item.Provinsi;
+                        row.appendChild(provinsiCell);
+                        
+                        const tahunCell = document.createElement('td');
+                        tahunCell.textContent = item.Tahun;
+                        row.appendChild(tahunCell);
+                        
+                        const co2Cell = document.createElement('td');
+                        co2Cell.textContent = item.CO2.toLocaleString();
+                        row.appendChild(co2Cell);
+                        
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // Update chart
+                    let chartLabels, chartData;
+                    
+                    if (provinsiFilter && !tahunFilter) {
+                        // Show data for a specific province over years
+                        const provinceData = emisiCO2Data.filter(item => item.Provinsi === provinsiFilter)
+                            .sort((a, b) => a.Tahun - b.Tahun);
+                        
+                        chartLabels = provinceData.map(item => item.Tahun);
+                        chartData = provinceData.map(item => item.CO2);
+                        
+                        emissionChart.options.scales.x.title.text = 'Year';
+                        emissionChart.data.datasets[0].label = `CO2 Emissions for ${provinsiFilter} (tons)`;
+                    } 
+                    else if (tahunFilter && !provinsiFilter) {
+                        // Show data for all provinces in a specific year (excluding "Total")
+                        const yearData = emisiCO2Data.filter(item => item.Tahun == tahunFilter && item.PROVINSI !== "Total")
+                            .sort((a, b) => b.CO2 - a.CO2);
+                        
+                        // Limit to top 20 provinces for better visualization
+                        const topProvinces = yearData.slice(0, 20);
+                        
+                        chartLabels = topProvinces.map(item => item.PROVINSI);
+                        chartData = topProvinces.map(item => item.CO2);
+                        
+                        emissionChart.options.scales.x.title.text = 'Province';
+                        emissionChart.data.datasets[0].label = `CO2 Emissions in ${tahunFilter} (tons)`;
+                    }
+                    else if (provinsiFilter && tahunFilter) {
+                        // Show single data point
+                        chartLabels = [`${provinsiFilter} (${tahunFilter})`];
+                        chartData = filteredData.map(item => item.CO2);
+                        
+                        emissionChart.options.scales.x.title.text = '';
+                        emissionChart.data.datasets[0].label = 'CO2 Emissions (tons)';
+                    }
+                    else {
+                        // Show total emissions by year
+                        const totalData = emisiCO2Data.filter(item => item.PROVINSI === "Total")
+                            .sort((a, b) => a.Tahun - b.Tahun);
+                        
+                        chartLabels = totalData.map(item => item.Tahun);
+                        chartData = totalData.map(item => item.CO2);
+                        
+                        emissionChart.options.scales.x.title.text = 'Year';
+                        emissionChart.data.datasets[0].label = 'Total CO2 Emissions (tons)';
+                    }
+                    
+                    emissionChart.data.labels = chartLabels;
+                    emissionChart.data.datasets[0].data = chartData;
+                    emissionChart.update();
+                    
+                    // Update map styling based on the selected year
+                    const selectedYear = tahunFilter || Math.max(...years);
+                    geojsonLayer.setStyle(styleFeature);
+                    updateLegend();
+                    
+                    // If a province is selected, zoom to it
+                    if (provinsiFilter) {
+                        geojsonLayer.eachLayer(layer => {
+                            if (getMappedProvinceName(layer.feature.properties.state) === provinsiFilter) {
+                                map.fitBounds(layer.getBounds());
+                            }
+                        });
+                    }
+                }
+                
+                // Initial data load
                 updateData();
+                
+                // Filter button event
+                document.getElementById('filterBtn').addEventListener('click', function() {
+                    const provinsiFilter = document.getElementById('provinsiSelect').value;
+                    const tahunFilter = document.getElementById('tahunSelect').value;
+                    updateData(provinsiFilter, tahunFilter);
+                });
+                
+                // Reset button event
+                document.getElementById('resetBtn').addEventListener('click', function() {
+                    document.getElementById('provinsiSelect').value = '';
+                    document.getElementById('tahunSelect').value = '';
+                    updateData();
+                    map.fitBounds(geojsonLayer.getBounds());
+                });
             });
-        });
-    </script>
-</body>
-</html>
+        </script>
+    </body>
+    </html>
+    
